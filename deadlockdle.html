@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deadlockdle</title>
+<style>
+:root {
+  --bg-primary: #111;
+  --bg-secondary: #1c1c1c;
+  --bg-tertiary: #222;
+  --text-primary: #eee;
+  --text-secondary: #ccc;
+  --accent-color: #444;
+  --hover-color: #666;
+  --border-color: #555;
+  --correct-color: #6aaa64;
+  --wrong-color: #ad1d33;
+  --cell-size: 80px;
+}
+
+* { box-sizing: border-box; }
+
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 20px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+h1 { margin-bottom: 0.5em; color: var(--text-primary); }
+
+.mode-buttons { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+
+button { margin: 0; padding: 8px 16px; border-radius: 6px; border: none; background: var(--accent-color);
+  color: var(--text-primary); cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s ease; min-width: 100px;
+}
+button:hover:not(:disabled) { background: var(--hover-color); transform: translateY(-1px); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.active { background: var(--correct-color); color: white; }
+
+.game-container { max-width: 800px; margin: 0 auto; }
+
+.input-section { margin: 20px 0; display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+
+.input-container { position: relative; flex: 1; min-width: 240px; }
+
+#guessInput {
+  width: 100%; padding: 10px 12px; border: 2px solid var(--border-color); border-radius: 6px;
+  background: var(--bg-secondary); color: var(--text-primary); font-size: 16px; outline: none; transition: border-color 0.2s ease;
+}
+#guessInput:focus { border-color: var(--correct-color); }
+
+#suggestions {
+  position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-tertiary);
+  border: 2px solid var(--border-color); border-top: none; border-radius: 0 0 6px 6px;
+  max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.suggestion { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background-color 0.2s ease; }
+.suggestion img { width: 32px; height: 32px; border-radius: 4px; background: #000; object-fit: cover; flex-shrink: 0; }
+.suggestion:hover { background: var(--hover-color); }
+.suggestion:first-child { background: var(--accent-color); }
+
+.clue-text { font-size: 18px; font-weight: 500; margin: 20px 0; padding: 15px; background: var(--bg-secondary); border-radius: 8px; border-left: 4px solid var(--correct-color); }
+.result-message { margin: 15px 0; padding: 12px; border-radius: 6px; font-weight: 500; text-align: center; }
+.result-success { background: rgba(106, 170, 100, 0.2); border: 2px solid var(--correct-color); color: var(--correct-color); }
+.result-error { background: rgba(173, 29, 51, 0.2); border: 2px solid var(--wrong-color); color: var(--wrong-color); }
+
+.history-section { margin-top: 30px; }
+.history-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+
+.grid-container { overflow-x: auto; border-radius: 8px; background: var(--bg-secondary); padding: 15px; }
+.grid-header { display: flex; margin-bottom: 10px; gap: 2px; }
+.grid-row { display: flex; margin-bottom: 6px; gap: 2px; }
+.grid-cell {
+  width: var(--cell-size); height: var(--cell-size); display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--border-color); border-radius: 6px; font-weight: bold; font-size: 12px; text-align: center;
+  flex-shrink: 0; padding: 4px; word-wrap: break-word; hyphens: auto;
+}
+.grid-header .grid-cell { background: var(--accent-color); color: var(--text-primary); height: 50px; font-size: 11px; }
+.grid-cell img { max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 4px; }
+
+.cell-correct { background: var(--correct-color); color: white; border-color: var(--correct-color); }
+.cell-wrong { background: var(--wrong-color); color: white; border-color: var(--wrong-color); }
+
+.emoji-history { display: flex; flex-wrap: wrap; gap: 10px; }
+.emoji-guess { width: 80px; height: 80px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 3px solid var(--border-color); transition: all 0.2s ease; }
+.emoji-guess.correct { background: var(--correct-color); border-color: var(--correct-color); }
+.emoji-guess.wrong { background: var(--wrong-color); border-color: var(--wrong-color); }
+.emoji-guess img { max-width: 70%; max-height: 70%; object-fit: contain; border-radius: 4px; }
+
+.loading { text-align: center; padding: 20px; color: var(--text-secondary); }
+@media (max-width: 768px) {
+  :root { --cell-size: 60px; }
+  body { padding: 10px; }
+  .input-section { flex-direction: column; }
+  .grid-container { padding: 10px; }
+  .grid-cell { font-size: 10px; }
+  .grid-header .grid-cell { font-size: 9px; height: 40px; }
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.loading { animation: pulse 1.5s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div class="game-container">
+  <h1>Deadlockdle</h1>
+  
+  <div class="mode-buttons">
+    <button id="modeDeadlockdle">Deadlockdle</button>
+    <button id="modeEmoji">Emoji</button>
+  </div>
+
+  <div id="game">
+    <div id="clue" class="clue-text">Choose gamemode to start!</div>
+    
+    <div class="input-section">
+      <div class="input-container">
+        <input type="text" id="guessInput" placeholder="Enter name of hero..." autocomplete="off">
+        <div id="suggestions" style="display:none;"></div>
+      </div>
+      <button id="guessBtn">Guess</button>
+    </div>
+    
+    <div id="result"></div>
+    
+    <div class="history-section">
+      <div class="history-title">Previous guesses:</div>
+      <div id="historyList">
+        <div class="loading">Nothing yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="deadlockdle_typescript.js"></script>
+
+</body>
+</html>
